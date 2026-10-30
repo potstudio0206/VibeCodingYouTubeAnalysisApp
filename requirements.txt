@@ -1,0 +1,7 @@
+# in App版の実行に必要なライブラリ（app/setup.bat でも入ります）
+yt-dlp[default]
+imageio-ffmpeg
+numpy
+opencv-python-headless
+rapidocr
+onnxruntime
