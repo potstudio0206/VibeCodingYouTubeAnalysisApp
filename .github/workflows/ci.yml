@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  unit:
+    name: 単体・適合テスト (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: 共通仕様の基準データが参照実装と一致するか
+        run: python shared/reference/metrics_ref.py --check
+      - name: 単体・適合テスト
+        run: python -m unittest discover -s tests -v
+
+  e2e:
+    name: 全工程テスト（合成配信）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: 依存（文字認識はCIではTesseractを使う）
+        run: |
+          sudo apt-get update && sudo apt-get install -y tesseract-ocr
+          pip install yt-dlp imageio-ffmpeg numpy opencv-python-headless scipy
+      - name: 全工程テスト
+        env:
+          RUN_SLOW: "1"
+        run: python -m unittest discover -s tests -p "test_e2e_synth.py" -v
+
+  shared-sync:
+    name: 共通仕様のずれ確認（警告のみ）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/check_shared_sync.py --remote --warn-only
